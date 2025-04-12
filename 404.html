@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirigiendo...</title>
+  <script type="text/javascript">
+    // Obtiene la ruta solicitada originalmente (ej: /mascotas-qr-v2/pet/ALGUN_ID)
+    // sessionStorage guarda datos solo para la sesión actual del navegador.
+    var path = sessionStorage.redirect || location.pathname; // Usa la guardada si existe, si no la actual
+    delete sessionStorage.redirect; // Borra la guardada para evitar bucles
+
+    // Si estamos en la página 404 directamente, guarda la ruta e intenta ir al index.html
+    if (location.pathname === '/mascotas-qr-v2/404.html') { // Ajusta '/mascotas-qr-v2/' si tu repo está en root de un dominio custom
+      sessionStorage.redirect = path.replace(/^\/mascotas-qr-v2/, ''); // Guarda la ruta SIN el nombre del repo base
+       // Asegúrate de que la redirección base apunte a tu index.html correctamente
+       location.replace('/mascotas-qr-v2/'); // Redirige a la raíz de tu proyecto
+    } else {
+       // Si ya estamos en index.html (o la raíz) y tenemos una ruta guardada, la procesamos
+       // Este script asume que será ejecutado por index.html después de la redirección
+       // (El código para manejar esto irá en app.js)
+    }
+
+    // --- Código alternativo más simple si el anterior da problemas ---
+    // Este simplemente redirige a la raíz pasando la ruta original como parámetro de búsqueda
+    // var segmentCount = 1; // Ajusta si tu repo está en root (0) o subcarpeta (1: /repo-name/)
+    // var l = window.location;
+    // l.replace(
+    //   l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+    //   l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?path=' +
+    //   l.pathname.slice(1).split('/').slice(segmentCount).join('/') +
+    //   l.search + l.hash
+    // );
+     // --- Fin Código alternativo ---
+
+  </script>
+   <!-- Intenta con este script aún más simple que usa parámetros query -->
+   <script>
+    const pathSegmentsToKeep = 1; // 0 para dominio raíz, 1 para user.github.io/repo-name/
+    const pathName = window.location.pathname;
+    const repoPath = pathName.split('/')[1]; // Obtiene "mascotas-qr-v2"
+    const redirectUrl = `/${repoPath}/?redirect=${encodeURIComponent(pathName.substring(repoPath.length + 1))}${window.location.search}${window.location.hash}`;
+    console.log(`404: Redirigiendo a ${redirectUrl}`);
+    window.location.replace(redirectUrl);
+   </script>
+</head>
+<body>
+  <p>Si no eres redirigido automáticamente, <a id="link" href="/mascotas-qr-v2/">haz clic aquí</a>.</p>
+   <script>
+     // Actualiza el enlace por si JavaScript falla antes
+     const link = document.getElementById('link');
+     const repoPath = window.location.pathname.split('/')[1];
+     link.href = `/${repoPath}/`;
+   </script>
+</body>
+</html>
