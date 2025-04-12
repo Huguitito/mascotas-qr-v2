@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de QRs para Chapitas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        #qr-code img { border: 1px solid #ccc; padding: 5px; background: white;}
+        #qr-result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generador de QRs para Chapitas</h1>
+        <p>Haz clic en el botón para generar un nuevo ID único y su código QR.</p>
+        <button id="generate-btn" class="btn btn-primary mb-3">Generar Nuevo QR</button>
+
+        <div id="qr-result" style="display: none;">
+            <h4>Resultado:</h4>
+            <p><strong>ID Único:</strong> <code id="pet-id"></code></p>
+            <p><strong>URL Completa:</strong> <span id="full-url"></span></p>
+            <p><strong>Código QR (haz clic derecho para guardar):</strong></p>
+            <div id="qr-code"></div>
+        </div>
+    </div>
+
+    <!-- Librería para generar QR -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+    <script>
+        const generateBtn = document.getElementById('generate-btn');
+        const qrResultDiv = document.getElementById('qr-result');
+        const petIdCode = document.getElementById('pet-id');
+        const fullUrlSpan = document.getElementById('full-url');
+        const qrCodeDiv = document.getElementById('qr-code');
+
+        // --- ¡CORREGIDO CON TU USUARIO! ---
+        const baseUrl = "https://huguitito.github.io/mascotas-qr-v2/";
+
+        function generateShortId(length = 8) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        generateBtn.addEventListener('click', () => {
+            const shortId = generateShortId();
+            // Asegúrate de que la URL NO tenga doble // si baseUrl termina en /
+            let urlPath = baseUrl.endsWith('/') ? 'pet/' : '/pet/';
+            const fullUrl = `${baseUrl}${urlPath}${shortId}`;
+
+            petIdCode.textContent = shortId;
+            fullUrlSpan.textContent = fullUrl;
+            qrCodeDiv.innerHTML = ''; // Limpiar QR anterior
+
+            new QRCode(qrCodeDiv, {
+                text: fullUrl,
+                width: 128,
+                height: 128,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            qrResultDiv.style.display = 'block';
+        });
+    </script>
+</body>
+</html>

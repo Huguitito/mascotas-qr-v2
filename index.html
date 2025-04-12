@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Mascota</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome (para iconos) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos Personalizados (opcional) -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos rápidos para ocultar/mostrar secciones */
+        .view { display: none; }
+        .active-view { display: block; }
+        .pet-icon { font-size: 4rem; color: #6c757d; /* Gris de Bootstrap */ margin-bottom: 1rem; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-4">
+
+        <!-- Vista de Carga -->
+        <div id="loading-view" class="view text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando datos...</p>
+        </div>
+
+        <!-- Vista de Registro (para el dueño por primera vez) -->
+        <div id="register-view" class="view">
+            <h2>¡Activa la Chapita de tu Mascota!</h2>
+            <p>Completa estos datos para proteger a tu compañero.</p>
+            <form id="register-form">
+                <h4>1. Tus Datos de Contacto (Para que te encuentren)</h4>
+                <div class="mb-3">
+                    <label for="owner-name" class="form-label">Tu Nombre:</label>
+                    <input type="text" class="form-control" id="owner-name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="owner-phone" class="form-label">Tu Teléfono (con código de país, ej: +54911...):</label>
+                    <input type="tel" class="form-control" id="owner-phone" required>
+                </div>
+                <div class="mb-3">
+                    <label for="owner-address" class="form-label">Tu Dirección (Calle, Número, Ciudad):</label>
+                    <input type="text" class="form-control" id="owner-address">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="show-address" checked>
+                    <label class="form-check-label" for="show-address">
+                        Permitir mostrar un enlace a mi dirección en Google Maps a quien encuentre mi mascota. (Recomendado para facilitar la devolución)
+                    </label>
+                </div>
+
+                <h4>2. Datos de tu Mascota</h4>
+                <div class="mb-3">
+                    <label for="pet-name" class="form-label">Nombre de tu Mascota:</label>
+                    <input type="text" class="form-control" id="pet-name" required>
+                </div>
+                 <div class="mb-3">
+                    <label for="pet-observations" class="form-label">Observaciones Importantes (Opcional):</label>
+                    <textarea class="form-control" id="pet-observations" rows="3" placeholder="Ej: Necesita medicación, es miedoso con extraños, etc."></textarea>
+                </div>
+
+                <h4>3. Crea tu Cuenta (Para editar más tarde)</h4>
+                 <div class="mb-3">
+                    <label for="register-email" class="form-label">Tu Email:</label>
+                    <input type="email" class="form-control" id="register-email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="register-password" class="form-label">Crea una Contraseña (mínimo 6 caracteres):</label>
+                    <input type="password" class="form-control" id="register-password" required minlength="6">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Guardar y Activar Chapita</button>
+            </form>
+             <p id="register-error" class="text-danger mt-2"></p>
+        </div>
+
+        <!-- Vista de Perfil Público (para quien encuentra la mascota) -->
+        <div id="public-profile-view" class="view card p-4 shadow-sm">
+            <div class="text-center mb-3">
+                <!-- Icono genérico en lugar de foto -->
+                <i class="fas fa-paw pet-icon"></i>
+                <h3 id="public-pet-name">Nombre Mascota</h3>
+            </div>
+            <p><strong>Dueño/a:</strong> <span id="public-owner-name"></span></p>
+
+             <div id="public-observations-section" class="alert alert-info" style="display: none;">
+                <strong>Notas Importantes:</strong>
+                <p id="public-pet-observations" class="mb-0"></p>
+             </div>
+
+            <p>¡Ayuda a esta mascota a volver a casa!</p>
+            <a id="whatsapp-button" href="#" class="btn btn-success w-100 mb-2" target="_blank">
+                <i class="fab fa-whatsapp"></i> Enviar WhatsApp al Dueño
+            </a>
+            <a id="maps-button" href="#" class="btn btn-info w-100 mb-3" target="_blank" style="display: none;">
+                <i class="fas fa-map-marker-alt"></i> Ver Dirección en Google Maps
+            </a>
+
+            <hr>
+            <button id="go-to-login-btn" class="btn btn-outline-secondary btn-sm">¿Eres el dueño? Inicia sesión para editar</button>
+        </div>
+
+        <!-- Vista de Edición (para el dueño logueado) -->
+        <div id="edit-view" class="view">
+             <h2>Editar Información</h2>
+             <p>Actualiza los datos de tu mascota o tu información de contacto.</p>
+             <form id="edit-form">
+                <h4>1. Tus Datos de Contacto</h4>
+                 <div class="mb-3">
+                     <label for="edit-owner-name" class="form-label">Tu Nombre:</label>
+                     <input type="text" class="form-control" id="edit-owner-name" required>
+                 </div>
+                 <div class="mb-3">
+                    <label for="edit-owner-phone" class="form-label">Tu Teléfono:</label>
+                    <input type="tel" class="form-control" id="edit-owner-phone" required>
+                </div>
+                <div class="mb-3">
+                    <label for="edit-owner-address" class="form-label">Tu Dirección:</label>
+                    <input type="text" class="form-control" id="edit-owner-address">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="edit-show-address">
+                    <label class="form-check-label" for="edit-show-address">
+                        Permitir mostrar enlace a mi dirección.
+                    </label>
+                </div>
+
+                <h4>2. Datos de tu Mascota</h4>
+                 <div class="mb-3">
+                     <label for="edit-pet-name" class="form-label">Nombre Mascota:</label>
+                     <input type="text" class="form-control" id="edit-pet-name" required>
+                 </div>
+                 <div class="mb-3">
+                     <label for="edit-pet-observations" class="form-label">Observaciones:</label>
+                     <textarea class="form-control" id="edit-pet-observations" rows="3"></textarea>
+                 </div>
+
+                <button type="submit" class="btn btn-primary w-100">Guardar Cambios</button>
+                <button id="logout-btn" type="button" class="btn btn-danger w-100 mt-2">Cerrar Sesión</button>
+             </form>
+             <p id="edit-error" class="text-danger mt-2"></p>
+             <p id="edit-success" class="text-success mt-2"></p>
+        </div>
+
+         <!-- Vista de Login -->
+        <div id="login-view" class="view">
+            <h2>Iniciar Sesión</h2>
+            <p>Accede para editar la información de tu mascota.</p>
+             <form id="login-form">
+                <div class="mb-3">
+                    <label for="login-email" class="form-label">Email:</label>
+                    <input type="email" class="form-control" id="login-email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="login-password" class="form-label">Contraseña:</label>
+                    <input type="password" class="form-control" id="login-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+             </form>
+             <p id="login-error" class="text-danger mt-2"></p>
+             <p class="mt-3">¿Aún no tienes cuenta? Regístrala escaneando tu chapita por primera vez.</p>
+             <button id="back-to-profile-btn" class="btn btn-outline-secondary btn-sm mt-2" style="display:none;">Volver al Perfil</button>
+        </div>
+
+        <!-- Vista de Error General -->
+         <div id="error-view" class="view alert alert-danger">
+             <h4>¡Ups! Algo salió mal</h4>
+             <p id="error-message">No pudimos cargar la información. Por favor, intenta de nuevo.</p>
+         </div>
+
+    </div> <!-- /container -->
+
+    <!-- Firebase SDK (Solo App, Firestore, Auth) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <!-- NO necesitamos firebase-storage-compat.js -->
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Tu Lógica JavaScript -->
+    <script src="app.js"></script>
+
+</body>
+</html>
