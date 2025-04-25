@@ -11,7 +11,7 @@ const firebaseConfig = {
 };
 
 // --- >>> !! IMPORTANTE: EMAIL DEL ADMINISTRADOR !! <<< ---
-const ADMIN_EMAIL = "huguitito@gmail.com"; // <<< REEMPLAZA con el email que creaste en Firebase Auth
+const ADMIN_EMAIL = "admin@tuweb.com"; // <<< REEMPLAZA con el email que creaste en Firebase Auth
 
 // 2. Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
@@ -32,7 +32,7 @@ const loadingOverlay = document.getElementById('loading-overlay');
 
 // --- Referencias al Modal ---
 const editPetModalElement = document.getElementById('editPetModal');
-const editPetModal = new bootstrap.Modal(editPetModalElement); // Inicializar modal de Bootstrap
+const editPetModal = new bootstrap.Modal(editPetModalElement);
 const modalPetIdInput = document.getElementById('modal-pet-id');
 const modalOwnerIdInput = document.getElementById('modal-owner-id');
 const modalCurrentPhotoUrlInput = document.getElementById('modal-current-photo-url');
@@ -46,24 +46,34 @@ const modalShowAddressCheckbox = document.getElementById('modal-show-address');
 const modalSaveBtn = document.getElementById('modal-save-btn');
 const modalDeleteBtn = document.getElementById('modal-delete-btn');
 const modalEditError = document.getElementById('modal-edit-error');
+// --- >>> Referencias para Enlace y QR (AÑADIDO) <<< ---
+const modalProfileLink = document.getElementById('modal-profile-link');
+const modalQrCodeImg = document.getElementById('modal-qr-code');
+const modalQrError = document.getElementById('modal-qr-error');
 
-const placeholderImage = 'generic-pet.png'; // Mismo placeholder
+
+// --- Variables Globales del Admin ---
+const placeholderImage = 'generic-pet.png';
+const repoName = "petid"; // <<<--- !! NOMBRE CORTO DEL REPO !!
+const baseUrl = `https://huguitito.github.io/${repoName}/`;
+const petSegment = 'p/';   // <<<--- !! SEGMENTO CORTO !!
+
 
 // ===========================================
 // FUNCIONES DEL ADMIN
 // ===========================================
 
 function showLoading(show) {
-    loadingOverlay.style.display = show ? 'flex' : 'none';
+    if(loadingOverlay) loadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
-// Función para cargar y mostrar las mascotas activadas
 async function loadActivatedPets() {
-    petsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Cargando datos... <i class="fas fa-spinner fa-spin"></i></td></tr>';
+    if (!petsTableBody) return; // Verificar si la tabla existe
+    petsTableBody.innerHTML = '<tr><td colspan="6" class="text-center p-4">Cargando datos... <i class="fas fa-spinner fa-spin ms-2"></i></td></tr>';
     try {
-        const snapshot = await db.collection('pets').orderBy('registeredAt', 'desc').get(); // Ordenar por más reciente
+        const snapshot = await db.collection('pets').orderBy('registeredAt', 'desc').get();
         if (snapshot.empty) {
-            petsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay chapitas activadas todavía.</td></tr>';
+            petsTableBody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">No hay chapitas activadas todavía.</td></tr>';
             return;
         }
 
@@ -72,37 +82,38 @@ async function loadActivatedPets() {
             const pet = doc.data();
             const petId = doc.id;
             const registeredDate = pet.registeredAt?.toDate ? pet.registeredAt.toDate().toLocaleDateString() : 'N/A';
+            const petNameDisplay = pet.petName || '<em class="text-muted">Sin nombre</em>';
+            const ownerNameDisplay = pet.ownerName || '<em class="text-muted">Sin nombre</em>';
+            const ownerPhoneDisplay = pet.ownerPhone || '<em class="text-muted">N/A</em>';
+
 
             tableHTML += `
                 <tr data-id="${petId}">
                     <td><code>${petId}</code></td>
-                    <td>${pet.petName || 'N/A'}</td>
-                    <td>${pet.ownerName || 'N/A'}</td>
-                    <td>${pet.ownerPhone || 'N/A'}</td>
+                    <td>${petNameDisplay}</td>
+                    <td>${ownerNameDisplay}</td>
+                    <td>${ownerPhoneDisplay}</td>
                     <td>${registeredDate}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info edit-btn" data-id="${petId}" title="Ver / Editar">
-                            <i class="fas fa-eye"></i> / <i class="fas fa-edit"></i>
+                    <td class="text-end"> <!-- Alinear botones -->
+                        <button class="btn btn-sm btn-info edit-btn me-1" data-id="${petId}" title="Ver / Editar">
+                            <i class="fas fa-eye"></i><span class="d-none d-md-inline"> Ver</span> / <i class="fas fa-edit"></i><span class="d-none d-md-inline"> Editar</span>
                         </button>
                         <button class="btn btn-sm btn-danger delete-btn" data-id="${petId}" title="Borrar">
-                            <i class="fas fa-trash-alt"></i>
+                            <i class="fas fa-trash-alt"></i><span class="d-none d-md-inline"> Borrar</span>
                         </button>
                     </td>
                 </tr>
             `;
         });
         petsTableBody.innerHTML = tableHTML;
-
-        // Añadir listeners a los botones recién creados
         addTableButtonListeners();
 
     } catch (error) {
         console.error("Error cargando mascotas:", error);
-        petsTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error al cargar datos: ${error.message}</td></tr>`;
+        petsTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger p-4">Error al cargar datos: ${error.message}</td></tr>`;
     }
 }
 
-// Añadir listeners a los botones de la tabla
 function addTableButtonListeners() {
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -113,17 +124,36 @@ function addTableButtonListeners() {
 
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevenir cualquier acción por defecto
+            e.stopPropagation(); // Prevenir que el clic active el modal si está en la fila
             const petId = e.currentTarget.getAttribute('data-id');
             handleDeletePet(petId);
         });
     });
+
+    // Opcional: hacer clic en la fila también abre el modal
+    document.querySelectorAll('#pets-table-body tr[data-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            // Solo abrir si no se hizo clic en un botón dentro de la fila
+            if (!e.target.closest('button')) {
+                 const petId = row.getAttribute('data-id');
+                openEditModal(petId);
+            }
+        });
+    });
 }
 
-// Abrir y poblar el modal de edición
 async function openEditModal(petId) {
+    if (!editPetModalElement) return;
     console.log("Abriendo modal para:", petId);
-    modalEditError.textContent = ''; // Limpiar errores previos
+    if (modalEditError) modalEditError.textContent = '';
     showLoading(true);
+
+    // Resetear QR y enlace antes de cargar nuevos datos
+    if (modalProfileLink) { modalProfileLink.href = "#"; modalProfileLink.textContent = "Cargando..."; }
+    if (modalQrCodeImg) { modalQrCodeImg.src = ""; modalQrCodeImg.style.display = 'none'; }
+    if (modalQrError) { modalQrError.style.display = 'none'; }
+
     try {
         const docRef = db.collection('pets').doc(petId);
         const docSnap = await docRef.get();
@@ -133,18 +163,41 @@ async function openEditModal(petId) {
         }
 
         const data = docSnap.data();
-        modalPetIdInput.value = petId;
-        modalOwnerIdInput.value = data.ownerUserId || '';
-        modalCurrentPhotoUrlInput.value = data.petPhotoUrl || ''; // Guardar URL actual
+        if(modalPetIdInput) modalPetIdInput.value = petId;
+        if(modalOwnerIdInput) modalOwnerIdInput.value = data.ownerUserId || '';
+        if(modalCurrentPhotoUrlInput) modalCurrentPhotoUrlInput.value = data.petPhotoUrl || '';
 
-        modalPetPhoto.src = data.petPhotoUrl || placeholderImage;
-        modalPetPhoto.onerror = () => { modalPetPhoto.src = placeholderImage; };
-        modalPetNameInput.value = data.petName || '';
-        modalOwnerNameInput.value = data.ownerName || '';
-        modalOwnerPhoneInput.value = data.ownerPhone || '';
-        modalOwnerAddressInput.value = data.ownerAddress || '';
-        modalPetObservationsInput.value = data.petObservations || '';
-        modalShowAddressCheckbox.checked = data.showAddressPublicly === true;
+        if(modalPetPhoto) {
+            modalPetPhoto.src = data.petPhotoUrl || placeholderImage;
+            modalPetPhoto.onerror = () => { if(modalPetPhoto) modalPetPhoto.src = placeholderImage; };
+        }
+        if(modalPetNameInput) modalPetNameInput.value = data.petName || '';
+        if(modalOwnerNameInput) modalOwnerNameInput.value = data.ownerName || '';
+        if(modalOwnerPhoneInput) modalOwnerPhoneInput.value = data.ownerPhone || '';
+        if(modalOwnerAddressInput) modalOwnerAddressInput.value = data.ownerAddress || '';
+        if(modalPetObservationsInput) modalPetObservationsInput.value = data.petObservations || '';
+        if(modalShowAddressCheckbox) modalShowAddressCheckbox.checked = data.showAddressPublicly === true;
+
+        // --- >>> Cargar Enlace y QR (AÑADIDO) <<< ---
+        const profileUrl = `${baseUrl}${petSegment}${petId}`;
+        if (modalProfileLink) {
+            modalProfileLink.href = profileUrl;
+            modalProfileLink.textContent = profileUrl;
+        }
+        if (modalQrCodeImg && modalQrError) {
+            const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(profileUrl)}`;
+            modalQrCodeImg.src = qrCodeApiUrl;
+            modalQrCodeImg.style.display = 'block';
+            modalQrCodeImg.onerror = () => {
+                console.error("Error al cargar imagen QR desde la API");
+                modalQrCodeImg.style.display = 'none';
+                modalQrError.textContent = "Error al generar QR.";
+                modalQrError.style.display = 'block';
+            };
+             modalQrError.style.display = 'none'; // Ocultar error si todo va bien
+        }
+        // --- >>> FIN Enlace y QR <<< ---
+
 
         showLoading(false);
         editPetModal.show();
@@ -156,76 +209,69 @@ async function openEditModal(petId) {
     }
 }
 
-// Guardar cambios desde el modal
 async function handleSaveChanges() {
-    const petId = modalPetIdInput.value;
-    modalEditError.textContent = '';
+    const petId = modalPetIdInput?.value;
+    if (!petId) return;
+    if(modalEditError) modalEditError.textContent = '';
     showLoading(true);
 
-    // Obtener datos del modal
     const updatedData = {
-        ownerName: modalOwnerNameInput.value.trim(),
-        ownerPhone: modalOwnerPhoneInput.value.trim(),
-        ownerAddress: modalOwnerAddressInput.value.trim(),
-        showAddressPublicly: modalShowAddressCheckbox.checked,
-        petName: modalPetNameInput.value.trim(),
-        petObservations: modalPetObservationsInput.value.trim(),
-        // No actualizamos ownerUserId, registeredAt ni photoUrl desde aquí (por simplicidad)
+        ownerName: modalOwnerNameInput?.value.trim(),
+        ownerPhone: modalOwnerPhoneInput?.value.trim(),
+        ownerAddress: modalOwnerAddressInput?.value.trim(),
+        showAddressPublicly: modalShowAddressCheckbox?.checked,
+        petName: modalPetNameInput?.value.trim(),
+        petObservations: modalPetObservationsInput?.value.trim(),
         lastUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    // Validación simple
     if (!updatedData.petName || !updatedData.ownerName || !updatedData.ownerPhone) {
-        modalEditError.textContent = "Nombre Mascota, Nombre Dueño y Teléfono son obligatorios.";
+        if(modalEditError) modalEditError.textContent = "Nombre Mascota, Nombre Dueño y Teléfono son obligatorios.";
         showLoading(false);
         return;
     }
 
     try {
-        console.log(`Actualizando datos para ${petId}...`);
         await db.collection('pets').doc(petId).update(updatedData);
-        console.log("Datos actualizados con éxito.");
         showLoading(false);
         editPetModal.hide();
-        await loadActivatedPets(); // Recargar la lista para ver los cambios
+        await loadActivatedPets(); // Recargar la lista
 
     } catch (error) {
         console.error("Error guardando cambios:", error);
         showLoading(false);
-        modalEditError.textContent = `Error al guardar: ${error.message}`;
+        if(modalEditError) modalEditError.textContent = `Error al guardar: ${error.message}`;
     }
 }
 
-// Manejar borrado de mascota
 async function handleDeletePet(petId) {
-    const petName = document.querySelector(`tr[data-id="${petId}"] td:nth-child(2)`)?.textContent || `ID ${petId}`;
+    if (!petId) return;
+    const petRow = document.querySelector(`tr[data-id="${petId}"]`);
+    const petName = petRow?.querySelector('td:nth-child(2)')?.textContent || `ID ${petId}`;
 
-    // --- CONFIRMACIÓN ---
-    if (!confirm(`¿Estás SEGURO de que quieres borrar el perfil de "${petName}" (ID: ${petId})?\n\n¡¡ESTA ACCIÓN NO SE PUEDE DESHACER!!`)) {
-        return; // Cancelado por el usuario
-    }
-     // --- SEGUNDA CONFIRMACIÓN (más enfática) ---
-     if (!confirm(`ÚLTIMA OPORTUNIDAD:\n\nBORRARÁS PERMANENTEMENTE los datos de "${petName}".\n\n¿Continuar?`)) {
-         return;
-     }
+    if (!confirm(`¿Estás SEGURO de borrar el perfil de "${petName}" (ID: ${petId})?\n\n¡ESTA ACCIÓN NO SE PUEDE DESHACER!`)) return;
+     if (!confirm(`ÚLTIMA OPORTUNIDAD:\n\nBORRARÁS PERMANENTEMENTE los datos de "${petName}".\n\n¿Continuar?`)) return;
 
     console.log(`Iniciando borrado de ${petId}...`);
     showLoading(true);
 
     try {
-        // 1. Borrar documento de Firestore
+        // Obtener URL de la foto ANTES de borrar (si es posible)
+        let photoUrlToDelete = null;
+        try {
+            const docSnap = await db.collection('pets').doc(petId).get();
+            if(docSnap.exists) photoUrlToDelete = docSnap.data()?.petPhotoUrl;
+        } catch (e) { console.warn("No se pudo obtener URL de foto antes de borrar", e); }
+
+
+        // Borrar documento de Firestore
         await db.collection('pets').doc(petId).delete();
         console.log(`Documento ${petId} borrado de Firestore.`);
 
-        // 2. Recordatorio de borrar foto de Cloudinary (MANUALMENTE)
-        const photoUrl = document.querySelector(`tr[data-id="${petId}"]`)?.dataset.photoUrl || // Intentar obtenerla si la guardamos en el futuro
-                         (await db.collection('pets').doc(petId).get()).data()?.petPhotoUrl; // O intentar obtenerla antes de borrar (arriesgado)
-                         // Como no la tenemos fácil, mostramos mensaje genérico:
-
-        alert(`¡Perfil borrado de la base de datos!\n\nIMPORTANTE: Recuerda borrar manualmente la foto asociada a este perfil desde tu panel de Cloudinary para liberar espacio.`);
+        alert(`¡Perfil borrado!\n\nIMPORTANTE: Si deseas eliminar la foto asociada (${photoUrlToDelete ? 'detectada' : 'no detectada'}), debes hacerlo manualmente desde tu panel de Cloudinary.`);
 
         showLoading(false);
-        await loadActivatedPets(); // Recargar la lista
+        await loadActivatedPets();
 
     } catch (error) {
         console.error("Error borrando mascota:", error);
@@ -241,55 +287,54 @@ async function handleDeletePet(petId) {
 
 auth.onAuthStateChanged(user => {
     if (user && user.email === ADMIN_EMAIL) {
-        // Usuario logueado Y es el admin
         console.log("Admin autenticado:", user.email);
-        adminLoginView.style.display = 'none';
-        adminMainView.style.display = 'block';
-        adminLogoutBtn.style.display = 'block';
-        loadActivatedPets(); // Cargar datos al entrar
+        if (adminLoginView) adminLoginView.style.display = 'none';
+        if (adminMainView) adminMainView.style.display = 'block';
+        if (adminLogoutBtn) adminLogoutBtn.style.display = 'block';
+        loadActivatedPets();
     } else {
-        // No logueado o no es el admin
         console.log("Usuario no es admin o no está logueado.");
-        adminLoginView.style.display = 'block';
-        adminMainView.style.display = 'none';
-        adminLogoutBtn.style.display = 'none';
+        if (adminLoginView) adminLoginView.style.display = 'block';
+        if (adminMainView) adminMainView.style.display = 'none';
+        if (adminLogoutBtn) adminLogoutBtn.style.display = 'none';
         if (user) {
-            // Si está logueado pero NO es el admin, desloguearlo
-            auth.signOut();
-            adminLoginError.textContent = "Acceso denegado. Esta cuenta no es administradora.";
+            auth.signOut(); // Desloguear si no es el admin
+            if (adminLoginError) adminLoginError.textContent = "Acceso denegado. Cuenta no autorizada.";
         }
     }
 });
 
-// Listener para el login del admin
 if (adminLoginForm) {
     adminLoginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        adminLoginError.textContent = '';
-        const email = adminLoginEmailInput.value;
-        const password = adminLoginPasswordInput.value;
+        if(adminLoginError) adminLoginError.textContent = '';
+        const email = adminLoginEmailInput?.value;
+        const password = adminLoginPasswordInput?.value;
 
+        if(!email || !password) {
+             if(adminLoginError) adminLoginError.textContent = "Ingresa email y contraseña.";
+             return;
+        }
         showLoading(true);
 
         auth.signInWithEmailAndPassword(email, password)
             .then((userCredential) => {
-                // El onAuthStateChanged manejará la visualización si es el admin correcto
+                // onAuthStateChanged verificará si es el email correcto
                 if (userCredential.user.email !== ADMIN_EMAIL) {
-                     auth.signOut(); // Desloguear si no es el admin
-                     adminLoginError.textContent = "Acceso denegado.";
+                     auth.signOut();
+                     if(adminLoginError) adminLoginError.textContent = "Acceso denegado.";
                 }
                 showLoading(false);
                 adminLoginForm.reset();
             })
             .catch((error) => {
                 console.error("Error de login admin:", error);
-                adminLoginError.textContent = `Error: ${error.message}`;
+                if(adminLoginError) adminLoginError.textContent = `Error: ${error.message}`;
                 showLoading(false);
             });
     });
 }
 
-// Listener para logout del admin
 if (adminLogoutBtn) {
     adminLogoutBtn.addEventListener('click', () => {
         auth.signOut().catch(error => {
@@ -299,7 +344,6 @@ if (adminLogoutBtn) {
     });
 }
 
- // Listener para el botón de refrescar
  if(refreshListBtn) {
      refreshListBtn.addEventListener('click', () => {
          console.log("Refrescando lista...");
@@ -307,16 +351,32 @@ if (adminLogoutBtn) {
      });
  }
 
- // Listener para el botón Guardar del Modal
  if(modalSaveBtn) {
      modalSaveBtn.addEventListener('click', handleSaveChanges);
  }
 
- // Listener para el botón Borrar del Modal
  if(modalDeleteBtn) {
      modalDeleteBtn.addEventListener('click', () => {
-         const petId = modalPetIdInput.value;
-         editPetModal.hide(); // Ocultar modal antes de confirmar
-         handleDeletePet(petId); // Llama a la función que ya tiene las confirmaciones
+         const petId = modalPetIdInput?.value;
+         if(petId) {
+             editPetModal.hide(); // Ocultar modal antes de confirmar
+             handleDeletePet(petId);
+         }
      });
  }
+
+ // Limpiar modal al cerrar
+ if (editPetModalElement) {
+    editPetModalElement.addEventListener('hidden.bs.modal', event => {
+        if (modalProfileLink) { modalProfileLink.href = "#"; modalProfileLink.textContent = "Cargando..."; }
+        if (modalQrCodeImg) { modalQrCodeImg.src = ""; modalQrCodeImg.style.display = 'none'; }
+        if (modalQrError) { modalQrError.style.display = 'none'; }
+        if (modalEditError) modalEditError.textContent = ''; // Limpiar errores del modal
+        // Resetear el formulario del modal si es necesario
+        // const modalForm = document.getElementById('modal-edit-form');
+        // if(modalForm) modalForm.reset();
+        console.log("Modal cerrado, limpiando enlace/QR.");
+    });
+}
+
+// --- Fin del código ---

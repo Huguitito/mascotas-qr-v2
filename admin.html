@@ -4,31 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Mascotas QR</title>
-    <!-- Estilos y Fuentes (igual que index.html) -->
+    <!-- Estilos y Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Estilos específicos del Admin (puedes crear admin.css o usar style) -->
+    <!-- Estilos específicos del Admin -->
     <link rel="stylesheet" href="style.css"> <!-- Reutiliza estilos base -->
      <style>
-         body { background-color: #e9ecef; font-family: 'Poppins', sans-serif; } /* Fondo distinto para admin y fuente Poppins */
+         body { background-color: #e9ecef; font-family: 'Poppins', sans-serif; }
          .admin-container { max-width: 1140px; }
-         #admin-login-view, #admin-main-view { display: none; } /* Ocultos por defecto */
+         #admin-login-view, #admin-main-view { display: none; }
          .table-hover tbody tr:hover { cursor: pointer; background-color: #f1f1f1; }
-         .modal-body img { max-width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 1rem; border: 3px solid #eee;}
+         .modal-body img#modal-pet-photo { max-width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 1rem; border: 3px solid #eee;}
+         .modal-body img#modal-qr-code { max-width: 120px; height: auto; border: 1px solid #ccc; padding: 5px; background: white; display: none; } /* Estilo específico para el QR */
          .loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(255, 255, 255, 0.7);
-            z-index: 1060; /* Encima del modal */
-            display: none; /* Oculto por defecto */
+            z-index: 1060;
+            display: none;
             justify-content: center; align-items: center;
          }
-         .card { border: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; } /* Estilo card mejorado */
+         .card { border: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; }
          .navbar-brand { font-weight: 700; }
          .btn { border-radius: 0.3rem; font-weight: 600; }
-         .table thead th { background-color: #343a40; color: white; } /* Cabecera tabla oscura */
+         .table thead th { background-color: #343a40; color: white; }
+         .public-link-section { background-color: #f8f9fa; } /* Fondo ligero para la sección QR */
      </style>
 </head>
 <body>
@@ -65,9 +67,9 @@
 
         <!-- Vista Principal del Admin (Tabla y Modal) -->
         <div id="admin-main-view" class="card p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"> <!-- flex-wrap y gap para responsive -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                  <h3 class="mb-0 fw-bold">Chapitas Activadas</h3>
-                 <div> <!-- Agrupamos los botones -->
+                 <div>
                     <a href="admin-generator.html" target="_blank" class="btn btn-sm btn-success me-2">
                         <i class="fas fa-qrcode"></i> Generar Nuevo QR
                     </a>
@@ -78,19 +80,18 @@
             </div>
 
              <div class="table-responsive">
-                <table class="table table-hover table-striped align-middle"> <!-- align-middle para centrar verticalmente -->
-                    <thead > <!-- thead-dark ya no es clase directa en BS5, se estiliza arriba -->
+                <table class="table table-hover table-striped align-middle">
+                    <thead >
                         <tr>
                             <th>QR ID</th>
                             <th>Mascota</th>
                             <th>Dueño</th>
                             <th>Teléfono</th>
                             <th>Registrado</th>
-                            <th class="text-end">Acciones</th> <!-- Alinear acciones a la derecha -->
+                            <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="pets-table-body">
-                        <!-- Las filas se insertarán aquí con JavaScript -->
                         <tr><td colspan="6" class="text-center p-4">Cargando datos... <i class="fas fa-spinner fa-spin ms-2"></i></td></tr>
                     </tbody>
                 </table>
@@ -111,6 +112,24 @@
             <div class="text-center mb-3">
                 <img id="modal-pet-photo" src="generic-pet.png" alt="Foto Mascota">
             </div>
+
+            <!-- ================================================ -->
+            <!-- === SECCIÓN ENLACE PÚBLICO Y QR (AÑADIDO) === -->
+            <!-- ================================================ -->
+            <div class="public-link-section text-center border rounded p-3 mb-4 bg-light">
+                <h6 class="fw-bold mb-2"><i class="fas fa-link me-1"></i> Enlace Público / QR</h6>
+                <div class="mb-2">
+                    <a id="modal-profile-link" href="#" target="_blank" class="small" style="word-break: break-all;">Cargando enlace...</a>
+                </div>
+                <div>
+                    <img id="modal-qr-code" src="" alt="Código QR" style="max-width: 120px;">
+                     <p id="modal-qr-error" class="text-danger small mt-2" style="display: none;">No se pudo generar el QR.</p>
+                </div>
+            </div>
+            <!-- ================================================ -->
+            <!-- === FIN SECCIÓN ENLACE PÚBLICO Y QR === -->
+            <!-- ================================================ -->
+
             <form id="modal-edit-form" novalidate>
                 <input type="hidden" id="modal-pet-id">
                 <input type="hidden" id="modal-owner-id">
@@ -153,9 +172,9 @@
 
             </form>
           </div>
-          <div class="modal-footer justify-content-between"> <!-- Justify between -->
+          <div class="modal-footer justify-content-between">
             <button type="button" id="modal-delete-btn" class="btn btn-danger"><i class="fas fa-trash-alt me-2"></i> Borrar Perfil</button>
-            <div> <!-- Agrupar botones de la derecha -->
+            <div>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 <button type="button" id="modal-save-btn" class="btn btn-primary"><i class="fas fa-save me-2"></i> Guardar Cambios</button>
             </div>
@@ -171,8 +190,7 @@
         </div>
     </div>
 
-
-    <!-- Firebase SDK (igual que index.html) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
