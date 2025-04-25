@@ -13,11 +13,11 @@
     <!-- Estilos específicos del Admin (puedes crear admin.css o usar style) -->
     <link rel="stylesheet" href="style.css"> <!-- Reutiliza estilos base -->
      <style>
-         body { background-color: #e9ecef; } /* Fondo distinto para admin */
+         body { background-color: #e9ecef; font-family: 'Poppins', sans-serif; } /* Fondo distinto para admin y fuente Poppins */
          .admin-container { max-width: 1140px; }
          #admin-login-view, #admin-main-view { display: none; } /* Ocultos por defecto */
          .table-hover tbody tr:hover { cursor: pointer; background-color: #f1f1f1; }
-         .modal-body img { max-width: 100px; border-radius: 50%; margin-bottom: 1rem;}
+         .modal-body img { max-width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 1rem; border: 3px solid #eee;}
          .loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(255, 255, 255, 0.7);
@@ -25,6 +25,10 @@
             display: none; /* Oculto por defecto */
             justify-content: center; align-items: center;
          }
+         .card { border: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; } /* Estilo card mejorado */
+         .navbar-brand { font-weight: 700; }
+         .btn { border-radius: 0.3rem; font-weight: 600; }
+         .table thead th { background-color: #343a40; color: white; } /* Cabecera tabla oscura */
      </style>
 </head>
 <body>
@@ -43,8 +47,8 @@
     <div class="container admin-container mt-4 mb-5">
 
         <!-- Vista de Login del Admin -->
-        <div id="admin-login-view" class="card shadow p-4 mx-auto" style="max-width: 450px;">
-            <h2 class="text-center mb-4">Acceso Administrador</h2>
+        <div id="admin-login-view" class="card p-4 p-md-5 mx-auto" style="max-width: 450px;">
+            <h2 class="text-center mb-4 fw-bold">Acceso Administrador</h2>
             <form id="admin-login-form" novalidate>
                 <div class="mb-3">
                     <label for="admin-login-email" class="form-label">Email Admin:</label>
@@ -54,35 +58,40 @@
                     <label for="admin-login-password" class="form-label">Contraseña:</label>
                     <input type="password" class="form-control form-control-lg" id="admin-login-password" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-lg w-100">Ingresar</button>
+                <button type="submit" class="btn btn-primary btn-lg w-100"><i class="fas fa-key me-2"></i>Ingresar</button>
             </form>
             <p id="admin-login-error" class="text-danger text-center mt-3 fw-bold"></p>
         </div>
 
         <!-- Vista Principal del Admin (Tabla y Modal) -->
-        <div id="admin-main-view" class="card shadow p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                 <h3 class="mb-0">Chapitas Activadas</h3>
-                 <button id="refresh-list-btn" class="btn btn-sm btn-outline-secondary">
-                     <i class="fas fa-sync-alt"></i> Refrescar
-                 </button>
+        <div id="admin-main-view" class="card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"> <!-- flex-wrap y gap para responsive -->
+                 <h3 class="mb-0 fw-bold">Chapitas Activadas</h3>
+                 <div> <!-- Agrupamos los botones -->
+                    <a href="admin-generator.html" target="_blank" class="btn btn-sm btn-success me-2">
+                        <i class="fas fa-qrcode"></i> Generar Nuevo QR
+                    </a>
+                    <button id="refresh-list-btn" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sync-alt"></i> Refrescar Lista
+                    </button>
+                 </div>
             </div>
 
              <div class="table-responsive">
-                <table class="table table-hover table-striped">
-                    <thead class="table-dark">
+                <table class="table table-hover table-striped align-middle"> <!-- align-middle para centrar verticalmente -->
+                    <thead > <!-- thead-dark ya no es clase directa en BS5, se estiliza arriba -->
                         <tr>
                             <th>QR ID</th>
                             <th>Mascota</th>
                             <th>Dueño</th>
                             <th>Teléfono</th>
                             <th>Registrado</th>
-                            <th>Acciones</th>
+                            <th class="text-end">Acciones</th> <!-- Alinear acciones a la derecha -->
                         </tr>
                     </thead>
                     <tbody id="pets-table-body">
                         <!-- Las filas se insertarán aquí con JavaScript -->
-                        <tr><td colspan="6" class="text-center">Cargando datos...</td></tr>
+                        <tr><td colspan="6" class="text-center p-4">Cargando datos... <i class="fas fa-spinner fa-spin ms-2"></i></td></tr>
                     </tbody>
                 </table>
              </div>
@@ -95,15 +104,15 @@
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="editPetModalLabel">Detalles / Editar Mascota</h5>
+            <h5 class="modal-title fw-bold" id="editPetModalLabel"><i class="fas fa-paw me-2"></i>Detalles / Editar Mascota</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="text-center mb-3">
                 <img id="modal-pet-photo" src="generic-pet.png" alt="Foto Mascota">
             </div>
-            <form id="modal-edit-form">
-                <input type="hidden" id="modal-pet-id"> <!-- Para saber qué ID estamos editando -->
+            <form id="modal-edit-form" novalidate>
+                <input type="hidden" id="modal-pet-id">
                 <input type="hidden" id="modal-owner-id">
                 <input type="hidden" id="modal-current-photo-url">
 
@@ -134,22 +143,21 @@
                  <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="modal-show-address">
                     <label class="form-check-label" for="modal-show-address">
-                        Permitir mostrar enlace a Google Maps.
+                        Permitir mostrar enlace a Google Maps públicamente.
                     </label>
                 </div>
-                 <!-- Nota: La edición de fotos por admin no está implementada para simplificar -->
                  <div class="alert alert-secondary small">
-                     Nota: Para cambiar la foto, el dueño debe hacerlo desde su perfil.
+                    <i class="fas fa-info-circle me-1"></i> Nota: Para cambiar la foto, el dueño debe hacerlo desde su perfil.
                  </div>
-                  <p id="modal-edit-error" class="text-danger fw-bold"></p>
+                  <p id="modal-edit-error" class="text-danger fw-bold text-center"></p>
 
             </form>
           </div>
-          <div class="modal-footer justify-content-between">
-            <button type="button" id="modal-delete-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Borrar Perfil</button>
-            <div>
+          <div class="modal-footer justify-content-between"> <!-- Justify between -->
+            <button type="button" id="modal-delete-btn" class="btn btn-danger"><i class="fas fa-trash-alt me-2"></i> Borrar Perfil</button>
+            <div> <!-- Agrupar botones de la derecha -->
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" id="modal-save-btn" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Cambios</button>
+                <button type="button" id="modal-save-btn" class="btn btn-primary"><i class="fas fa-save me-2"></i> Guardar Cambios</button>
             </div>
           </div>
         </div>
@@ -158,7 +166,7 @@
 
     <!-- Overlay de carga -->
     <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner-border text-primary" role="status">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
             <span class="visually-hidden">Procesando...</span>
         </div>
     </div>
